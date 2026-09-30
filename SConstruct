@@ -201,6 +201,7 @@ opts.Add(BoolVariable("metal", "Enable the Metal rendering driver on supported p
 opts.Add(BoolVariable("use_volk", "Use the volk library to load the Vulkan loader dynamically", True))
 opts.Add(BoolVariable("accesskit", "Enable the AccessKit driver for screen reader support", True))
 opts.Add(BoolVariable("angle", "Enable the ANGLE rendering driver for OpenGL ES 3.0 on supported platforms", True))
+opts.Add(BoolVariable("use_xess", "Enable the Intel XeSS temporal upscaling driver on supported platforms", True))
 opts.Add(BoolVariable("sdl", "Enable the SDL3 input driver", True))
 opts.Add(
     EnumVariable(
@@ -595,6 +596,20 @@ if not env["deprecated"]:
 
 if env["precision"] == "double":
     env.Append(CPPDEFINES=["REAL_T_IS_DOUBLE"])
+
+if env["use_xess"]:
+    # Intel XeSS is Windows-only and rides on the Vulkan or Direct3D 12 backend.
+    # Only the vendored headers are needed at build time; libxess.dll is loaded
+    # dynamically, so a missing runtime just disables XeSS (falling back to FSR 2).
+    if env["platform"] == "windows" and (env["vulkan"] or env["d3d12"]):
+        env.AppendUnique(CPPDEFINES=["XESS_ENABLED"])
+        # Defined globally: the Vulkan/D3D12 render drivers need them too.
+        if env["vulkan"]:
+            env.AppendUnique(CPPDEFINES=["XESS_ENABLED_VULKAN"])
+        if env["d3d12"]:
+            env.AppendUnique(CPPDEFINES=["XESS_ENABLED_D3D12"])
+    else:
+        env["use_xess"] = False
 
 # Library Support
 if env["library_type"] != "executable":

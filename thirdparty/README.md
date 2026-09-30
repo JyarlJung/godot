@@ -508,6 +508,23 @@ Files generated from upstream source:
 5. Copy `source/data/out/icudt{ICU_VERSION}l.dat` to the `{GODOT_SOURCE}/thirdparty/icu4c/icudt_godot.dat`
 
 
+## intel-xess
+
+- Upstream: https://github.com/intel/xess
+- Version: 3.0.1 (2026)
+- License: Intel XeSS SDK License
+
+Only the public headers are vendored. The Intel XeSS runtime (`libxess.dll`) is
+a proprietary binary that is not redistributed here; it is loaded dynamically at
+runtime and must be supplied by the user from the XeSS SDK (placed next to the
+executable). No import library is linked at build time.
+
+Files extracted from upstream source:
+
+- `inc/xess/*.h` as `include/xess/`
+- `LICENSE.txt`
+
+
 ## jolt_physics
 
 - Upstream: https://github.com/jrouwe/JoltPhysics

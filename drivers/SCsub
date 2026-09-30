@@ -68,6 +68,10 @@ if env["sdl"] and env["platform"] in ["linuxbsd", "macos", "windows", "ios", "vi
 # Core dependencies
 SConscript("png/SCsub")
 
+# Intel XeSS temporal upscaler (Windows + Vulkan/D3D12, opt-in via user-supplied SDK binaries).
+if env["use_xess"]:
+    SConscript("xess/SCsub")
+
 env.add_source_files(env.drivers_sources, "*.cpp")
 
 lib = env.add_library("drivers", env.drivers_sources)
