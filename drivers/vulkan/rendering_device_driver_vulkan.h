@@ -773,6 +773,7 @@ public:
 	/**** DEBUG *****/
 	/****************/
 	virtual void command_insert_breadcrumb(CommandBufferID p_cmd_buffer, uint32_t p_data) override final;
+	virtual void *command_buffer_get_native_handle(CommandBufferID p_cmd_buffer) override final;
 	void print_lost_device_info();
 	void on_device_lost() const;
 	static String get_vulkan_result(VkResult err);
@@ -828,6 +829,13 @@ private:
 public:
 	RenderingDeviceDriverVulkan(RenderingContextDriverVulkan *p_context_driver);
 	virtual ~RenderingDeviceDriverVulkan();
+
+	// Native handle accessors for effects that drive a closed-source SDK, mirroring
+	// how the MetalFX effect casts the device driver to reach MTL::Device.
+	// RenderingDevice::get_driver_resource() does not expose the instance.
+	VkInstance vulkan_instance_get() const { return context_driver != nullptr ? context_driver->instance_get() : VK_NULL_HANDLE; }
+	VkPhysicalDevice vulkan_physical_device_get() const { return physical_device; }
+	VkDevice vulkan_device_get() const { return vk_device; }
 };
 
 using VKC = RenderingContextDriverVulkan;

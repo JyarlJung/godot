@@ -895,6 +895,8 @@ public:
 	/**** DEBUG *****/
 	/****************/
 	virtual void command_insert_breadcrumb(CommandBufferID p_cmd_buffer, uint32_t p_data) override final;
+	virtual void *command_buffer_get_native_handle(CommandBufferID p_cmd_buffer) override final;
+	virtual void command_buffer_invalidate_bound_state(CommandBufferID p_cmd_buffer) override final;
 
 	/********************/
 	/**** SUBMISSION ****/

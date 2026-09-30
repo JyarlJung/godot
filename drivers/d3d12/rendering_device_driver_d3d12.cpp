@@ -5663,6 +5663,24 @@ void RenderingDeviceDriverD3D12::command_insert_breadcrumb(CommandBufferID p_cmd
 	// TODO: Implement via DRED.
 }
 
+void *RenderingDeviceDriverD3D12::command_buffer_get_native_handle(CommandBufferID p_cmd_buffer) {
+	const CommandBufferInfo *cmd_buf_info = (const CommandBufferInfo *)p_cmd_buffer.id;
+	return (void *)cmd_buf_info->cmd_list.Get();
+}
+
+void RenderingDeviceDriverD3D12::command_buffer_invalidate_bound_state(CommandBufferID p_cmd_buffer) {
+	// An external SDK recording into this command list leaves its own pipeline state,
+	// root signature and descriptor heaps bound. Clear the caches this driver uses to
+	// skip redundant binds so the next command rebinds everything.
+	CommandBufferInfo *cmd_buf_info = (CommandBufferInfo *)p_cmd_buffer.id;
+	cmd_buf_info->graphics_pso = nullptr;
+	cmd_buf_info->graphics_root_signature_crc = 0;
+	cmd_buf_info->compute_pso = nullptr;
+	cmd_buf_info->compute_root_signature_crc = 0;
+	cmd_buf_info->pending_dyn_params = true;
+	cmd_buf_info->descriptor_heaps_set = false;
+}
+
 /********************/
 /**** SUBMISSION ****/
 /********************/

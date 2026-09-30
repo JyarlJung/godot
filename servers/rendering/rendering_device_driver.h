@@ -844,6 +844,13 @@ public:
 	/****************/
 	virtual void command_insert_breadcrumb(CommandBufferID p_cmd_buffer, uint32_t p_data) = 0;
 
+	// Native command buffer handle: VkCommandBuffer or ID3D12GraphicsCommandList *.
+	virtual void *command_buffer_get_native_handle(CommandBufferID p_cmd_buffer) { return nullptr; }
+
+	// Called after an external SDK recorded commands into the buffer. Drivers that
+	// cache bound state (pipelines, root signatures, descriptor heaps) must drop it.
+	virtual void command_buffer_invalidate_bound_state(CommandBufferID p_cmd_buffer) {}
+
 	/********************/
 	/**** SUBMISSION ****/
 	/********************/

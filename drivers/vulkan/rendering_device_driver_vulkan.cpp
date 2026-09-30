@@ -36,6 +36,10 @@
 #include "core/templates/fixed_vector.h"
 #include "drivers/vulkan/vulkan_hooks.h"
 
+#ifdef XESS_ENABLED_VULKAN
+#include "drivers/xess/xess_context.h"
+#endif
+
 #include <thirdparty/misc/smolv.h>
 
 #if defined(SWAPPY_FRAME_PACING_ENABLED)
@@ -590,6 +594,23 @@ Error RenderingDeviceDriverVulkan::_initialize_device_extensions() {
 	// We don't actually use this extension, but some runtime components on some platforms
 	// can and will fill the validation layers with useless info otherwise if not enabled.
 	_register_requested_device_extension(VK_KHR_EXTERNAL_MEMORY_FD_EXTENSION_NAME, false);
+
+#ifdef XESS_ENABLED_VULKAN
+	// Request the device extensions XeSS reports, as optional: a device without them
+	// still works, XeSS just stays unavailable on it.
+	if (XeSSContext::get().has_vulkan()) {
+		uint32_t xess_extension_count = 0;
+		const char *const *xess_extensions = nullptr;
+		if (XeSSContext::get().xessVKGetRequiredDeviceExtensions(context_driver->instance_get(), physical_device, &xess_extension_count, &xess_extensions) == XESS_RESULT_SUCCESS) {
+			for (uint32_t i = 0; i < xess_extension_count; i++) {
+				CharString xess_extension = xess_extensions[i];
+				if (!requested_device_extensions.has(xess_extension)) {
+					_register_requested_device_extension(xess_extension, false);
+				}
+			}
+		}
+	}
+#endif
 
 	if (Engine::get_singleton()->is_generate_spirv_debug_info_enabled()) {
 		_register_requested_device_extension(VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME, true);
@@ -1483,6 +1504,45 @@ Error RenderingDeviceDriverVulkan::_initialize_device(const LocalVector<VkDevice
 		}
 	}
 
+#ifdef XESS_ENABLED_VULKAN
+	// XeSS writes the features it needs into the chain handed to it. It requires them
+	// in a VkPhysicalDeviceFeatures2 chained through pNext rather than in
+	// pEnabledFeatures, which it cannot modify, so wrap Godot's features and clear
+	// pEnabledFeatures below.
+	//
+	// Seed the chain with the individual structs for the promoted features XeSS asks
+	// for. Left out, XeSS appends the VkPhysicalDeviceVulkan1{2,3}Features aggregates,
+	// which Vulkan forbids next to the individual structs Godot already chains (e.g.
+	// VkPhysicalDevicePipelineCreationCacheControlFeatures). Drivers accept that chain
+	// and then quietly leave the features off, so the XeSS shaders fault the device.
+	VkPhysicalDeviceScalarBlockLayoutFeatures xess_scalar_block_layout_features = {};
+	VkPhysicalDeviceShaderIntegerDotProductFeatures xess_integer_dot_product_features = {};
+	VkPhysicalDeviceFeatures2 xess_device_features_2 = {};
+	bool xess_owns_device_features = false;
+	if (XeSSContext::get().has_vulkan()) {
+		xess_scalar_block_layout_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SCALAR_BLOCK_LAYOUT_FEATURES;
+		xess_scalar_block_layout_features.pNext = create_info_next;
+		create_info_next = &xess_scalar_block_layout_features;
+
+		xess_integer_dot_product_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_INTEGER_DOT_PRODUCT_FEATURES;
+		xess_integer_dot_product_features.pNext = create_info_next;
+		create_info_next = &xess_integer_dot_product_features;
+
+		xess_device_features_2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+		xess_device_features_2.pNext = create_info_next;
+		xess_device_features_2.features = requested_device_features;
+
+		void *xess_features = &xess_device_features_2;
+		xess_result_t xess_result = XeSSContext::get().xessVKGetRequiredDeviceFeatures(context_driver->instance_get(), physical_device, &xess_features);
+		if (xess_result == XESS_RESULT_SUCCESS) {
+			create_info_next = xess_features;
+			xess_owns_device_features = true;
+		} else {
+			print_verbose(vformat("Intel XeSS: xessVKGetRequiredDeviceFeatures failed (%s); XeSS will stay unavailable on this device.", XeSSContext::result_to_string(xess_result)));
+		}
+	}
+#endif
+
 	VkDeviceCreateInfo create_info = {};
 	create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 	create_info.pNext = create_info_next;
@@ -1491,6 +1551,13 @@ Error RenderingDeviceDriverVulkan::_initialize_device(const LocalVector<VkDevice
 	create_info.enabledExtensionCount = enabled_extension_names.size();
 	create_info.ppEnabledExtensionNames = enabled_extension_names.ptr();
 	create_info.pEnabledFeatures = &requested_device_features;
+#ifdef XESS_ENABLED_VULKAN
+	if (xess_owns_device_features) {
+		// The features now travel in the VkPhysicalDeviceFeatures2 chained above;
+		// Vulkan forbids passing both.
+		create_info.pEnabledFeatures = nullptr;
+	}
+#endif
 
 	if (VulkanHooks::get_singleton() != nullptr) {
 		bool device_created = VulkanHooks::get_singleton()->create_vulkan_device(&create_info, &vk_device);
@@ -6923,6 +6990,11 @@ void RenderingDeviceDriverVulkan::command_insert_breadcrumb(CommandBufferID p_cm
 		breadcrumb_offset = 0u;
 	}
 #endif
+}
+
+void *RenderingDeviceDriverVulkan::command_buffer_get_native_handle(CommandBufferID p_cmd_buffer) {
+	const CommandBufferInfo *cmd_buf_info = (const CommandBufferInfo *)p_cmd_buffer.id;
+	return (void *)cmd_buf_info->vk_command_buffer;
 }
 
 void RenderingDeviceDriverVulkan::on_device_lost() const {
