@@ -46,6 +46,7 @@
 #include "editor/settings/editor_settings.h"
 #include "editor/themes/editor_scale.h"
 #include "scene/resources/image_texture.h"
+#include "servers/rendering/rendering_server_enums.h"
 
 #include "modules/svg/image_loader_svg.h"
 
@@ -300,6 +301,23 @@ Error EditorExportPlatformWindows::export_project(const Ref<EditorExportPreset> 
 		}
 	}
 
+	// The Intel XeSS runtime is not redistributed with the engine, so it is only copied
+	// when the user has placed it next to the export templates.
+	int export_xess = p_preset->get("application/export_xess");
+	bool include_xess_libs = false;
+	if (export_xess == 0) {
+		include_xess_libs = (int(get_project_setting(p_preset, "rendering/scaling_3d/mode")) == RSE::VIEWPORT_SCALING_3D_MODE_XESS) && (String(get_project_setting(p_preset, "rendering/renderer/rendering_method")) == "forward_plus");
+	} else if (export_xess == 1) {
+		include_xess_libs = true;
+	}
+	if (include_xess_libs) {
+		if (da->file_exists(template_path.get_base_dir().path_join("libxess." + arch + ".dll"))) {
+			da->copy(template_path.get_base_dir().path_join("libxess." + arch + ".dll"), path.get_base_dir().path_join("libxess.dll"), get_chmod_flags());
+		} else if (export_xess == 1) {
+			add_message(EXPORT_MESSAGE_WARNING, TTR("Prepare Templates"), vformat(TTR("Intel XeSS was requested but \"libxess.%s.dll\" is not next to the export templates; the exported project will fall back to FSR 2."), arch));
+		}
+	}
+
 	// Export project.
 	String pck_path = path;
 	if (embedded) {
@@ -434,7 +452,7 @@ bool EditorExportPlatformWindows::get_export_option_visibility(const EditorExpor
 
 	// Hide resources.
 	bool mod_res = p_preset->get("application/modify_resources");
-	if (!mod_res && p_option != "application/modify_resources" && p_option != "application/export_angle" && p_option != "application/export_d3d12" && p_option != "application/d3d12_agility_sdk_multiarch" && p_option.begins_with("application/")) {
+	if (!mod_res && p_option != "application/modify_resources" && p_option != "application/export_angle" && p_option != "application/export_d3d12" && p_option != "application/export_xess" && p_option != "application/d3d12_agility_sdk_multiarch" && p_option.begins_with("application/")) {
 		return false;
 	}
 
@@ -450,6 +468,7 @@ bool EditorExportPlatformWindows::get_export_option_visibility(const EditorExpor
 			p_option == "application/d3d12_agility_sdk_multiarch" ||
 			p_option == "application/export_angle" ||
 			p_option == "application/export_d3d12" ||
+			p_option == "application/export_xess" ||
 			p_option == "application/icon_interpolation") {
 		return advanced_options_enabled;
 	}
@@ -485,6 +504,7 @@ void EditorExportPlatformWindows::get_export_options(List<ExportOption> *r_optio
 	r_options->push_back(ExportOption(PropertyInfo(Variant::INT, "application/export_angle", PROPERTY_HINT_ENUM, "Auto,Yes,No"), 0, true));
 	r_options->push_back(ExportOption(PropertyInfo(Variant::INT, "application/export_d3d12", PROPERTY_HINT_ENUM, "Auto,Yes,No"), 0, true));
 	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "application/d3d12_agility_sdk_multiarch"), true, true));
+	r_options->push_back(ExportOption(PropertyInfo(Variant::INT, "application/export_xess", PROPERTY_HINT_ENUM, "Auto,Yes,No"), 0, true));
 
 	String run_script = "Expand-Archive -LiteralPath '{temp_dir}\\{archive_name}' -DestinationPath '{temp_dir}'\n"
 						"$action = New-ScheduledTaskAction -Execute '{temp_dir}\\{exe_name}' -Argument '{cmd_args}'\n"
