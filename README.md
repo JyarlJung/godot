@@ -6,6 +6,10 @@
   </a>
 </p>
 
+> **This is a fork.** It adds Intel XeSS Super Resolution as a 3D scaling mode on
+> Windows, for both Vulkan and Direct3D 12. See **[XESS.md](XESS.md)** for how to
+> build it, turn it on, and ship it with an exported game.
+
 ## 2D and 3D cross-platform game engine
 
 **[Godot Engine](https://godotengine.org) is a feature-packed, cross-platform
