@@ -9,9 +9,11 @@ alongside the upstream bilinear and FSR modes.
 
 ## Getting the runtime
 
-Only the public XeSS headers are vendored (`thirdparty/intel-xess`, SDK v3.0.1).
-The runtime is a proprietary binary and is **not** redistributed here, so you have
-to supply it:
+The release archive already contains `libxess.dll`, so nothing extra is needed to
+run the prebuilt editor.
+
+Only the public XeSS headers are vendored (`thirdparty/intel-xess`, SDK v3.0.1);
+the runtime itself is not in this repository. If you build from source, supply it:
 
 1. Download a release from <https://github.com/intel/xess/releases> (v3.0.1 or
    newer).

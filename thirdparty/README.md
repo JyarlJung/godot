@@ -514,15 +514,17 @@ Files generated from upstream source:
 - Version: 3.0.1 (2026)
 - License: Intel XeSS SDK License
 
-Only the public headers are vendored. The Intel XeSS runtime (`libxess.dll`) is
-a proprietary binary that is not redistributed here; it is loaded dynamically at
-runtime and must be supplied by the user from the XeSS SDK (placed next to the
-executable). No import library is linked at build time.
+Only the public headers are vendored. The Intel XeSS runtime (`libxess.dll`) is a
+proprietary binary that is not vendored in-tree; release archives ship it under
+the Intel license. It is loaded dynamically at runtime and must otherwise be
+supplied by the user from the XeSS SDK (placed next to the executable). No import
+library is linked at build time.
 
 Files extracted from upstream source:
 
 - `inc/xess/*.h` as `include/xess/`
 - `LICENSE.txt`
+- `third-party-programs.txt`
 
 
 ## jolt_physics
