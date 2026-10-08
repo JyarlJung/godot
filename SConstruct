@@ -608,6 +608,9 @@ if env["use_xess"]:
             env.AppendUnique(CPPDEFINES=["XESS_ENABLED_VULKAN"])
         if env["d3d12"]:
             env.AppendUnique(CPPDEFINES=["XESS_ENABLED_D3D12"])
+        # Export templates install per VERSION_FULL_CONFIG; the suffix keeps this
+        # fork out of the official "4.7.2.stable" template slot.
+        env.add_module_version_string("xess")
     else:
         env["use_xess"] = False
 

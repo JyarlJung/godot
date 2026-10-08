@@ -77,7 +77,16 @@ import library.
 ## Exporting a project
 
 An exported game runs on an export template, not on the editor binary, so the
-templates have to carry XeSS too:
+templates have to carry XeSS too.
+
+### Installing the templates
+
+Download `Godot_v4.7.2-stable-xess_export_templates.tpz` from the release and
+install it with **Editor → Manage Export Templates → Install from File**. This
+fork reports its version as `4.7.2.stable.xess`, so the templates land in their
+own slot and leave an existing official `4.7.2.stable` install untouched.
+
+### Building them yourself
 
 ```
 scons platform=windows target=template_release vulkan=yes d3d12=yes
